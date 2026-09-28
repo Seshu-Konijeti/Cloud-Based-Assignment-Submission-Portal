@@ -46,6 +46,7 @@
 </div>
 
 <script src="config.js"></script>
+<script src="js/api.js"></script>
 <script>
 const user = requireAuth(["student", "teacher", "admin"]);
 document.getElementById("dash-link").href = (user.role === "student") ? "student_dashboard.html" : "teacher_dashboard.html";
