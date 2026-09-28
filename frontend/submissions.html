@@ -60,7 +60,7 @@ async function load() {
 
 function downloadFile(submissionId) {
   const token = getToken();
-  fetch(`http://localhost:5000/api/submissions/${submissionId}/download`, {
+  fetch(`${API_BASE}/submissions/${submissionId}/download`, {
     headers: { Authorization: `Bearer ${token}` }
   }).then(async res => {
     if (!res.ok) { alert("Download failed."); return; }

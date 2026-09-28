@@ -5,7 +5,7 @@
  * production-hardened build you'd prefer an httpOnly cookie to
  * reduce XSS token-theft risk.
  */
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = window.API_BASE_OVERRIDE || "http://localhost:5000/api";
 
 function getToken() {
   return localStorage.getItem("access_token");
