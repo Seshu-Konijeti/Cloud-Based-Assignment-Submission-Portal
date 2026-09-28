@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Assignments</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav>
+  <div class="brand">Cloud Assignment Portal</div>
+  <div>
+    <a class="btn" id="dash-link" href="#">Dashboard</a>
+    <button onclick="logout()">Logout</button>
+  </div>
+</nav>
+<div class="container">
+  <h2>Assignments</h2>
+
+  <div class="card" id="create-card" style="display:none;">
+    <h3>Create New Assignment</h3>
+    <div class="form-group"><label>Course ID</label><input id="course_id" type="number" placeholder="e.g. 1"></div>
+    <div class="form-group"><label>Title</label><input id="title"></div>
+    <div class="form-group"><label>Description</label><textarea id="description"></textarea></div>
+    <div class="form-group"><label>Deadline</label><input id="deadline" type="datetime-local"></div>
+    <div class="form-group"><label>Max Marks</label><input id="max_marks" type="number" value="100"></div>
+    <button class="primary" onclick="createAssignment()">Create Assignment</button>
+    <div id="create-msg"></div>
+  </div>
+
+  <div class="card">
+    <table id="assignments-table">
+      <thead><tr><th>Title</th><th>Deadline</th><th>Max Marks</th><th>Status / Actions</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Upload modal (simple inline form area) -->
+<div class="container" id="upload-area" style="display:none;">
+  <div class="card">
+    <h3 id="upload-title">Submit Assignment</h3>
+    <input type="file" id="upload-file">
+    <button class="primary" onclick="doUpload()">Upload</button>
+    <div id="upload-msg"></div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+const user = requireAuth(["student", "teacher", "admin"]);
+document.getElementById("dash-link").href = (user.role === "student") ? "student_dashboard.html" : "teacher_dashboard.html";
+if (user.role !== "student") document.getElementById("create-card").style.display = "block";
+
+let mySubs = {};
+let currentAssignmentId = null;
+
+async function loadAssignments() {
+  const data = await apiRequest("/assignments");
+  if (user.role === "student") {
+    const subData = await apiRequest("/submissions/me");
+    mySubs = {};
+    subData.submissions.forEach(s => mySubs[s.assignment_id] = s);
+  }
+  const tbody = document.querySelector("#assignments-table tbody");
+  tbody.innerHTML = data.assignments.map(a => {
+    const deadline = new Date(a.deadline).toLocaleString();
+    if (user.role === "student") {
+      const sub = mySubs[a.assignment_id];
+      const status = sub ? sub.submission_status : "NOT_SUBMITTED";
+      const marks = sub && sub.marks !== null ? ` (${sub.marks}/${a.max_marks})` : "";
+      return `<tr>
+        <td>${a.title}</td><td>${deadline}</td><td>${a.max_marks}</td>
+        <td>
+          <span class="badge ${status}">${status}${marks}</span>
+          <button onclick="openUpload(${a.assignment_id}, '${a.title.replace(/'/g, "")}')">
+            ${sub ? "Resubmit" : "Upload"}
+          </button>
+          ${sub ? `<button onclick="viewFeedback(${sub.submission_id})">View Feedback</button>` : ""}
+        </td>
+      </tr>`;
+    } else {
+      return `<tr>
+        <td>${a.title}</td><td>${deadline}</td><td>${a.max_marks}</td>
+        <td><button onclick="viewSubmissions(${a.assignment_id}, '${a.title.replace(/'/g, "")}')">View Submissions</button></td>
+      </tr>`;
+    }
+  }).join("");
+}
+
+async function createAssignment() {
+  const msg = document.getElementById("create-msg");
+  msg.textContent = "";
+  try {
+    const course_id = parseInt(document.getElementById("course_id").value);
+    const title = document.getElementById("title").value.trim();
+    const description = document.getElementById("description").value;
+    const deadlineLocal = document.getElementById("deadline").value;
+    const max_marks = parseInt(document.getElementById("max_marks").value);
+    const deadline = new Date(deadlineLocal).toISOString();
+    await apiRequest("/assignments", { method: "POST", body: { course_id, title, description, deadline, max_marks } });
+    msg.className = "success-msg";
+    msg.textContent = "Assignment created.";
+    loadAssignments();
+  } catch (e) {
+    msg.className = "error-msg";
+    msg.textContent = e.payload?.message || "Failed to create assignment.";
+  }
+}
+
+function openUpload(assignmentId, title) {
+  currentAssignmentId = assignmentId;
+  document.getElementById("upload-title").textContent = `Submit: ${title}`;
+  document.getElementById("upload-area").style.display = "block";
+  window.scrollTo(0, document.body.scrollHeight);
+}
+
+async function doUpload() {
+  const fileInput = document.getElementById("upload-file");
+  const msg = document.getElementById("upload-msg");
+  msg.textContent = "";
+  if (!fileInput.files.length) { msg.className = "error-msg"; msg.textContent = "Choose a file first."; return; }
+  const form = new FormData();
+  form.append("file", fileInput.files[0]);
+  try {
+    await apiRequest(`/assignments/${currentAssignmentId}/submit`, { method: "POST", body: form, isForm: true });
+    msg.className = "success-msg";
+    msg.textContent = "Uploaded successfully.";
+    loadAssignments();
+  } catch (e) {
+    msg.className = "error-msg";
+    msg.textContent = e.payload?.message || "Upload failed.";
+  }
+}
+
+async function viewFeedback(submissionId) {
+  try {
+    const data = await apiRequest(`/submissions/${submissionId}/feedback`);
+    alert(`Status: ${data.submission_status}\nMarks: ${data.marks ?? "Not graded yet"}\nFeedback: ${data.feedback || "No feedback yet"}`);
+  } catch (e) {
+    alert(e.payload?.message || "Could not load feedback.");
+  }
+}
+
+function viewSubmissions(assignmentId, title) {
+  window.location.href = `submissions.html?assignment_id=${assignmentId}&title=${encodeURIComponent(title)}`;
+}
+
+loadAssignments();
+</script>
+</body>
+</html>

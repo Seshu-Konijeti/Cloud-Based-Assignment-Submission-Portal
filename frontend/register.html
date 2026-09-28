@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Register - Cloud Assignment Portal</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="container">
+  <div class="auth-box card">
+    <h1>Create Account</h1>
+
+    <div class="form-group">
+      <label>Full Name</label>
+      <input type="text" id="name">
+    </div>
+
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="email">
+    </div>
+
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="password">
+    </div>
+
+    <div class="form-group">
+      <label>Role</label>
+      <select id="role">
+        <option value="student">Student</option>
+        <option value="teacher">Teacher</option>
+      </select>
+    </div>
+
+    <div class="form-group" id="code-group" style="display:none;">
+      <label>Teacher Invite Code</label>
+      <input type="text" id="invite_code" placeholder="Enter the code given by your institution">
+    </div>
+
+    <button class="primary" onclick="doRegister()">Register</button>
+    <div id="msg"></div>
+
+    <p class="muted" style="margin-top:16px;">
+      Already have an account? <a class="link" href="login.html">Login</a>
+    </p>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+// Show the invite code box only when "Teacher" is selected
+document.getElementById("role").addEventListener("change", function (e) {
+  document.getElementById("code-group").style.display =
+    e.target.value === "teacher" ? "block" : "none";
+});
+
+async function doRegister() {
+  const name = document.getElementById("name").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const role = document.getElementById("role").value;
+  const invite_code = document.getElementById("invite_code").value.trim();
+  const msg = document.getElementById("msg");
+  msg.textContent = "";
+
+  try {
+    await apiRequest("/register", {
+      method: "POST",
+      body: { name, email, password, role, invite_code }
+    });
+    msg.className = "success-msg";
+    msg.textContent = "Registered successfully! Redirecting to login...";
+    setTimeout(() => window.location.href = "login.html", 1200);
+  } catch (e) {
+    msg.className = "error-msg";
+    msg.textContent = e.payload?.message || "Registration failed.";
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Teacher Dashboard</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav>
+  <div class="brand">Cloud Assignment Portal</div>
+  <div>
+    <a class="btn" href="assignments.html">Assignments</a>
+    <button onclick="logout()">Logout</button>
+  </div>
+</nav>
+<div class="container">
+  <h2>Teacher Dashboard</h2>
+  <div class="grid-stats" id="stats"></div>
+
+  <div class="card">
+    <h3>Upcoming Deadlines</h3>
+    <table id="upcoming-table">
+      <thead><tr><th>Title</th><th>Deadline</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Recent Uploads</h3>
+    <table id="recent-table">
+      <thead><tr><th>Assignment</th><th>Student ID</th><th>Status</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+<script src="js/api.js"></script>
+<script>
+requireAuth(["teacher", "admin"]);
+
+async function load() {
+  try {
+    const data = await apiRequest("/dashboard/teacher");
+    document.getElementById("stats").innerHTML = `
+      <div class="stat"><div class="num">${data.total_assignments}</div><div class="label">Assignments</div></div>
+      <div class="stat"><div class="num">${data.total_students}</div><div class="label">Students</div></div>
+      <div class="stat"><div class="num">${data.total_submissions}</div><div class="label">Submissions</div></div>
+      <div class="stat"><div class="num">${data.pending_reviews}</div><div class="label">Pending Review</div></div>
+      <div class="stat"><div class="num">${data.late_submissions}</div><div class="label">Late</div></div>
+      <div class="stat"><div class="num">${data.graded_submissions}</div><div class="label">Graded</div></div>
+    `;
+    document.querySelector("#upcoming-table tbody").innerHTML = data.upcoming_deadlines.map(a => `
+      <tr><td>${a.title}</td><td>${new Date(a.deadline).toLocaleString()}</td></tr>
+    `).join("") || `<tr><td colspan="2" class="muted">None</td></tr>`;
+    document.querySelector("#recent-table tbody").innerHTML = data.recent_uploads.map(s => `
+      <tr><td>#${s.assignment_id}</td><td>#${s.student_id}</td><td><span class="badge ${s.submission_status}">${s.submission_status}</span></td></tr>
+    `).join("") || `<tr><td colspan="3" class="muted">None</td></tr>`;
+  } catch (e) {
+    if (e.status === 401) logout();
+  }
+}
+load();
+</script>
+</body>
+</html>

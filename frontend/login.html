@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Login - Cloud Assignment Portal</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="container">
+  <div class="auth-box card">
+    <h1>Cloud Assignment Portal</h1>
+    <p class="muted">Sign in as a student or teacher.</p>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="email" placeholder="teacher@example.com">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="password" placeholder="••••••••">
+    </div>
+    <button class="primary" onclick="doLogin()">Login</button>
+    <div id="msg"></div>
+    <p class="muted" style="margin-top:16px;">
+      No account? <a class="link" href="register.html">Register here</a>
+    </p>
+    <p class="muted">
+      Demo accounts (after running seed.py):<br>
+      teacher@example.com / Teacher@123<br>
+      student1@example.com / Student@123
+    </p>
+  </div>
+</div>
+<script src="js/api.js"></script>
+<script>
+async function doLogin() {
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const msg = document.getElementById("msg");
+  msg.textContent = "";
+  try {
+    const data = await apiRequest("/login", { method: "POST", body: { email, password } });
+    setToken(data.access_token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+    window.location.href = data.user.role === "teacher" || data.user.role === "admin"
+      ? "teacher_dashboard.html" : "student_dashboard.html";
+  } catch (e) {
+    msg.className = "error-msg";
+    msg.textContent = e.payload?.message || "Login failed.";
+  }
+}
+</script>
+</body>
+</html>

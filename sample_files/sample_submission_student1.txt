@@ -1,0 +1,10 @@
+Dummy Sample Submission - Student: Rahul Sharma
+Assignment: Cloud Storage Basics
+
+Object storage (e.g., Amazon S3, Firebase Storage) is optimized for storing
+large unstructured blobs like documents, images and videos, accessed via a
+flat key namespace over HTTP. Block storage (e.g., AWS EBS) attaches to a
+single compute instance and behaves like a raw disk with a filesystem.
+
+This is placeholder dummy content used purely to demonstrate the file
+upload/download workflow of this project. No real coursework is contained here.

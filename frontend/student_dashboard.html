@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Student Dashboard</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav>
+  <div class="brand">Cloud Assignment Portal</div>
+  <div>
+    <a class="btn" href="assignments.html">Assignments</a>
+    <button onclick="logout()">Logout</button>
+  </div>
+</nav>
+<div class="container">
+  <h2 id="welcome">Welcome</h2>
+  <div class="grid-stats" id="stats"></div>
+
+  <div class="card">
+    <h3>Upcoming Deadlines</h3>
+    <table id="upcoming-table">
+      <thead><tr><th>Title</th><th>Deadline</th><th>Max Marks</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Recent Feedback</h3>
+    <table id="feedback-table">
+      <thead><tr><th>Assignment</th><th>Marks</th><th>Feedback</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+<script src="js/api.js"></script>
+<script>
+requireAuth(["student"]);
+
+async function load() {
+  try {
+    const data = await apiRequest("/dashboard/student");
+    document.getElementById("welcome").textContent = data.welcome;
+    document.getElementById("stats").innerHTML = `
+      <div class="stat"><div class="num">${data.total_assignments}</div><div class="label">Total Assignments</div></div>
+      <div class="stat"><div class="num">${data.pending_assignments}</div><div class="label">Pending</div></div>
+      <div class="stat"><div class="num">${data.submitted_assignments}</div><div class="label">Submitted</div></div>
+      <div class="stat"><div class="num">${data.late_assignments}</div><div class="label">Late</div></div>
+      <div class="stat"><div class="num">${data.graded_assignments}</div><div class="label">Graded</div></div>
+    `;
+    const upcomingBody = document.querySelector("#upcoming-table tbody");
+    upcomingBody.innerHTML = data.upcoming_deadlines.map(a => `
+      <tr><td>${a.title}</td><td>${new Date(a.deadline).toLocaleString()}</td><td>${a.max_marks}</td></tr>
+    `).join("") || `<tr><td colspan="3" class="muted">No upcoming assignments</td></tr>`;
+
+    const fbBody = document.querySelector("#feedback-table tbody");
+    fbBody.innerHTML = data.recent_feedback.map(s => `
+      <tr><td>#${s.assignment_id}</td><td>${s.marks}</td><td>${s.feedback || ""}</td></tr>
+    `).join("") || `<tr><td colspan="3" class="muted">No feedback yet</td></tr>`;
+  } catch (e) {
+    if (e.status === 401) logout();
+  }
+}
+load();
+</script>
+</body>
+</html>

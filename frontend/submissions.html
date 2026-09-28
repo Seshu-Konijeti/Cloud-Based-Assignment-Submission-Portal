@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Submissions</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav>
+  <div class="brand">Cloud Assignment Portal</div>
+  <div>
+    <a class="btn" href="assignments.html">Back to Assignments</a>
+    <button onclick="logout()">Logout</button>
+  </div>
+</nav>
+<div class="container">
+  <h2 id="page-title">Submissions</h2>
+  <div class="card">
+    <table id="subs-table">
+      <thead><tr><th>Student</th><th>Submitted At</th><th>Status</th><th>File</th><th>Marks</th><th>Actions</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="container" id="grade-area" style="display:none;">
+  <div class="card">
+    <h3 id="grade-title">Grade Submission</h3>
+    <div class="form-group"><label>Marks</label><input id="marks" type="number"></div>
+    <div class="form-group"><label>Feedback</label><textarea id="feedback"></textarea></div>
+    <button class="primary" onclick="submitGrade()">Save Grade</button>
+    <div id="grade-msg"></div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+const user = requireAuth(["teacher", "admin"]);
+const params = new URLSearchParams(window.location.search);
+const assignmentId = params.get("assignment_id");
+document.getElementById("page-title").textContent = `Submissions: ${params.get("title") || ""}`;
+let currentSubmissionId = null;
+
+async function load() {
+  const data = await apiRequest(`/assignments/${assignmentId}/submissions`);
+  document.querySelector("#subs-table tbody").innerHTML = data.submissions.map(s => `
+    <tr>
+      <td>${s.student_name}<br><span class="muted">${s.student_email}</span></td>
+      <td>${new Date(s.submitted_at).toLocaleString()}</td>
+      <td><span class="badge ${s.submission_status}">${s.submission_status}</span></td>
+      <td>${s.file_name}</td>
+      <td>${s.marks !== null ? s.marks : "-"}</td>
+      <td class="actions">
+        <button onclick="downloadFile(${s.submission_id})">Download</button>
+        <button onclick="openGrade(${s.submission_id}, '${s.student_name.replace(/'/g, "")}')">Grade</button>
+      </td>
+    </tr>
+  `).join("") || `<tr><td colspan="6" class="muted">No submissions yet</td></tr>`;
+}
+
+function downloadFile(submissionId) {
+  const token = getToken();
+  fetch(`http://localhost:5000/api/submissions/${submissionId}/download`, {
+    headers: { Authorization: `Bearer ${token}` }
+  }).then(async res => {
+    if (!res.ok) { alert("Download failed."); return; }
+    const blob = await res.blob();
+    const disposition = res.headers.get("Content-Disposition") || "";
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    const filename = match ? match[1] : "submission";
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename; a.click();
+    window.URL.revokeObjectURL(url);
+  });
+}
+
+function openGrade(submissionId, studentName) {
+  currentSubmissionId = submissionId;
+  document.getElementById("grade-title").textContent = `Grade Submission - ${studentName}`;
+  document.getElementById("grade-area").style.display = "block";
+  window.scrollTo(0, document.body.scrollHeight);
+}
+
+async function submitGrade() {
+  const msg = document.getElementById("grade-msg");
+  msg.textContent = "";
+  const marks = parseInt(document.getElementById("marks").value);
+  const feedback = document.getElementById("feedback").value;
+  try {
+    await apiRequest(`/submissions/${currentSubmissionId}/grade`, { method: "POST", body: { marks, feedback } });
+    msg.className = "success-msg";
+    msg.textContent = "Grade saved.";
+    load();
+  } catch (e) {
+    msg.className = "error-msg";
+    msg.textContent = e.payload?.message || "Failed to save grade.";
+  }
+}
+
+load();
+</script>
+</body>
+</html>
